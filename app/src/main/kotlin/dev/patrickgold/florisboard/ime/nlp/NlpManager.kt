@@ -202,10 +202,10 @@ class NlpManager(context: Context) {
             try {
                 val result = net.objecthunter.exp4j.ExpressionBuilder(inputText).build().evaluate()
                 val resultText = if (result == result.toLong().toDouble()) {
-                    result.toLong().toString()
-                } else {
-                    result.toString()
-                }
+    String.format(java.util.Locale("id", "ID"), "%,d", result.toLong())
+} else {
+    result.toString()
+}
                 internalSuggestionsGuard.withLock {
                     internalSuggestions = reqTime to listOf(
                         MathSuggestionCandidate(text = resultText, secondaryText = inputText)
@@ -228,7 +228,7 @@ class NlpManager(context: Context) {
                 val json = org.json.JSONObject(response.body!!.string())
                 val rate = json.getJSONObject("rates").getDouble(to)
                 val result = amount * rate
-                val resultText = "%.2f %s".format(result, to)
+                val resultText = String.format(java.util.Locale("id", "ID"), "%,.2f %s", result, to)
                 internalSuggestionsGuard.withLock {
                     internalSuggestions = reqTime to listOf(
                         MathSuggestionCandidate(text = resultText, secondaryText = "$amount $from → $to")
