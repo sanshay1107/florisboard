@@ -169,3 +169,13 @@ data class EmojiSuggestionCandidate(
     override val text = emoji.value
     override val secondaryText = if (showName) emoji.name else null
 }
+
+data class MathSuggestionCandidate(
+    override val text: CharSequence,
+    override val secondaryText: CharSequence? = null,
+    override val confidence: Double = 1.0,
+    override val isEligibleForAutoCommit: Boolean = false,
+    override val isEligibleForUserRemoval: Boolean = false,
+    override val icon: ImageVector? = null,
+    override val sourceProvider: SuggestionProvider? = null,
+) : SuggestionCandidate

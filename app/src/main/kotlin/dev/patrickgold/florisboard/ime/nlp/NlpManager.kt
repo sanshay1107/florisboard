@@ -196,6 +196,24 @@ class NlpManager(context: Context) {
     fun suggest(subtype: Subtype, content: EditorContent) {
         val reqTime = SystemClock.uptimeMillis()
         scope.launch {
+            val inputText = content.text.trim()
+        val mathRegex = Regex("""[\d+\-*/().%\s]+""")
+        if (mathRegex.matches(inputText) && inputText.isNotBlank()) {
+            try {
+                val result = net.objecthunter.exp4j.ExpressionBuilder(inputText).build().evaluate()
+                val resultText = if (result == result.toLong().toDouble()) {
+                    result.toLong().toString()
+                } else {
+                    result.toString()
+                }
+                internalSuggestionsGuard.withLock {
+                    internalSuggestions = reqTime to listOf(
+                        MathSuggestionCandidate(text = resultText, secondaryText = inputText)
+                    )
+                }
+                return@launch
+            } catch (_: Exception) { }
+        }
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
