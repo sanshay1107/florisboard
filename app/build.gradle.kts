@@ -226,6 +226,7 @@ dependencies {
     testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso.core)
+    implementation("net.objecthunter:exp4j:0.4.8")
 }
 
 fun getGitCommitHash(short: Boolean = false): Provider<String> {
