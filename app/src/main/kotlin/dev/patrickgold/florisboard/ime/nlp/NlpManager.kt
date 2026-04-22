@@ -197,7 +197,7 @@ class NlpManager(context: Context) {
         val reqTime = SystemClock.uptimeMillis()
         scope.launch {
             val inputText = content.text.trim()
-        val mathRegex = Regex("""[\d+\-*/().%\s]+""")
+        val mathRegex = Regex("""^[a-zA-Z0-9\s\+\-\*\/\(\)\.\%\^]+$""")
         if (mathRegex.matches(inputText) && inputText.isNotBlank()) {
             try {
                 val result = net.objecthunter.exp4j.ExpressionBuilder(inputText).build().evaluate()
