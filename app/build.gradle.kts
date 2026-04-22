@@ -227,6 +227,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso.core)
     implementation("net.objecthunter:exp4j:0.4.8")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
 fun getGitCommitHash(short: Boolean = false): Provider<String> {

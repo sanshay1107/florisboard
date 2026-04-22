@@ -214,6 +214,29 @@ class NlpManager(context: Context) {
                 return@launch
             } catch (_: Exception) { }
         }
+          val currencyRegex = Regex("""^(\d+(?:\.\d+)?)\s*([a-zA-Z]{3})\s+to\s+([a-zA-Z]{3})$""", RegexOption.IGNORE_CASE)
+          val currencyMatch = currencyRegex.find(inputText)
+          if (currencyMatch != null) {
+            val amount = currencyMatch.groupValues[1].toDouble()
+            val from = currencyMatch.groupValues[2].uppercase()
+            val to = currencyMatch.groupValues[3].uppercase()
+            try {
+                val url = "https://open.er-api.com/v6/latest/$from"
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(url).build()
+                val response = client.newCall(request).execute()
+                val json = org.json.JSONObject(response.body!!.string())
+                val rate = json.getJSONObject("rates").getDouble(to)
+                val result = amount * rate
+                val resultText = "%.2f %s".format(result, to)
+                internalSuggestionsGuard.withLock {
+                    internalSuggestions = reqTime to listOf(
+                        MathSuggestionCandidate(text = resultText, secondaryText = "$amount $from → $to")
+                    )
+                }
+                return@launch
+            } catch (_: Exception) { }
+          }
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
