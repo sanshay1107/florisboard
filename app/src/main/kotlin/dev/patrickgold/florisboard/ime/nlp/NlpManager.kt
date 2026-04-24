@@ -54,7 +54,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
 class NlpManager(context: Context) {
-    private val context = context 
     private fun readApiKey(keyName: String): String {
     return try {
         val file = java.io.File("/sdcard/florisboard_keys.txt")
@@ -278,7 +277,7 @@ class NlpManager(context: Context) {
 
         val request = okhttp3.Request.Builder()
             .url("https://api-free.deepl.com/v2/translate")
-            .addHeader("Authorization", "DeepL-Auth-Key ${readApiKey("DEEPL_API_KEY")}")
+            .addHeader("Authorization", "DeepL-Auth-Key ${dev.patrickgold.florisboard.BuildConfig.DEEPL_API_KEY}")
             .post(requestBody)
             .build()
 
