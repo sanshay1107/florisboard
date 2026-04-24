@@ -278,11 +278,11 @@ if (translateMatch != null) {
         }
         """.trimIndent()
 
-        val body = jsonBody.toRequestBody("application/json".toMediaType())
-val request = okhttp3.Request.Builder()
-    .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
-    .post(body)
-    .build()
+        val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
+        val request = okhttp3.Request.Builder()
+          .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
+            .post(requestBody)
+            .build()
 
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return@launch
