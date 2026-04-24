@@ -79,6 +79,7 @@ configure<ApplicationExtension> {
         buildConfigField("String", "FLADDONS_API_VERSION", "\"v~draft2\"")
         buildConfigField("String", "FLADDONS_STORE_URL", "\"beta.addons.florisboard.org\"")
         buildConfigField("String", "GEMINI_API_KEY", "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\"")
+        buildConfigField("String", "DEEPL_API_KEY", "\"${project.findProperty("DEEPL_API_KEY") ?: ""}\"")
 
         sourceSets {
             maybeCreate("main").apply {

@@ -255,32 +255,20 @@ class NlpManager(context: Context) {
           
   
           val translateRegex = Regex("""^tr\s+([a-zA-Z]{2})\s+to\s+([a-zA-Z]{2})\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
-val translateMatch = translateRegex.find(inputText)
+          val translateMatch = translateRegex.find(inputText)
 
-if (translateMatch != null) {
+          if (translateMatch != null) {
     val fromLang = translateMatch.groupValues[1].uppercase()
     val toLang = translateMatch.groupValues[2].uppercase()
     val textToTranslate = translateMatch.groupValues[3].trim()
 
     try {
-        val systemInstruction = "You are a professional translator. Task: Translate text and fix grammar. Rule: Output ONLY the translated result. No explanations, no quotes, no conversational filler."
-        val userPrompt = "Translate from $fromLang to $toLang: $textToTranslate"
-        val fullPrompt = "$systemInstruction\n\n$userPrompt"
+        val requestBody = "text=${java.net.URLEncoder.encode(textToTranslate, "UTF-8")}&source_lang=$fromLang&target_lang=$toLang"
+            .toRequestBody("application/x-www-form-urlencoded".toMediaType())
 
-        val jsonBody = """
-        {
-          "contents": [{"parts": [{"text": "$fullPrompt"}]}],
-          "generationConfig": {
-            "temperature": 0.1,
-            "topP": 0.95,
-            "maxOutputTokens": 1024
-          }
-        }
-        """.trimIndent()
-
-        val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
         val request = okhttp3.Request.Builder()
-          .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
+            .url("https://api-free.deepl.com/v2/translate")
+            .addHeader("Authorization", "DeepL-Auth-Key ${dev.patrickgold.florisboard.BuildConfig.DEEPL_API_KEY}")
             .post(requestBody)
             .build()
 
@@ -288,10 +276,7 @@ if (translateMatch != null) {
         val body = response.body?.string() ?: return@launch
         val json = org.json.JSONObject(body)
         val finalResult = json
-            .getJSONArray("candidates")
-            .getJSONObject(0)
-            .getJSONObject("content")
-            .getJSONArray("parts")
+            .getJSONArray("translations")
             .getJSONObject(0)
             .getString("text")
             .trim()
