@@ -274,28 +274,17 @@ class NlpManager(context: Context) {
             .build()
 
         val response = httpClient.newCall(request).execute()
-        val body = response.body?.string() ?: return@launch
-        val json = org.json.JSONObject(body)
-        val finalResult = json
-            .getJSONArray("translations")
-            .getJSONObject(0)
-            .getString("text")
-            .trim()
-
-        internalSuggestionsGuard.withLock {
-            internalSuggestions = reqTime to listOf(
-                MathSuggestionCandidate(text = finalResult, secondaryText = "DeepL: $fromLang→$toLang")
-            )
-        }
-        return@launch
-    } catch (e: Exception) {
-        internalSuggestionsGuard.withLock {
-            internalSuggestions = reqTime to listOf(
-                MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
-            )
-        }
-        return@launch
+        val body = response.body?.string() ?: "null body"
+val json = try {
+    org.json.JSONObject(body)
+} catch (ex: Exception) {
+    internalSuggestionsGuard.withLock {
+        internalSuggestions = reqTime to listOf(
+            MathSuggestionCandidate(text = body.take(50), secondaryText = "raw response")
+        )
     }
+    return@launch
+}
 }
 
             val emojiSuggestions = when {
