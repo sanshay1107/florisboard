@@ -248,20 +248,17 @@ class NlpManager(context: Context) {
             val fromLang = translateMatch.groupValues[1].lowercase()
             val toLang = translateMatch.groupValues[2].lowercase()
            val textToTranslate = translateMatch.groupValues[3].trim()
-            val email = "janganmakan56@gmail.com"
 
             try {
+                
                 val encodedTr = java.net.URLEncoder.encode(textToTranslate, "UTF-8")
-                val trUrl = "https://api.mymemory.translated.net/get?q=$encodedTr&langpair=$fromLang|$toLang&de=$email"
+                val trUrl = "https://lingva.ml/api/v1/$fromLang/$toLang/$encodedTr"
                 val trRequest = okhttp3.Request.Builder().url(trUrl).build()
                 val trResponse = httpClient.newCall(trRequest).execute()
 
                 val trBody = trResponse.body?.string() ?: return@launch
                 val trJson = org.json.JSONObject(trBody)
-
-                if (trJson.getInt("responseStatus") != 200) return@launch
-
-                var finalResult = trJson.getJSONObject("responseData").getString("translatedText")
+                var finalResult = trJson.getString("translation")
                 var statusLabel = "$fromLang → $toLang"
 
 
