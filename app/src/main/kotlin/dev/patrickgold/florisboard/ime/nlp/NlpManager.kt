@@ -201,23 +201,32 @@ class NlpManager(context: Context) {
         val reqTime = SystemClock.uptimeMillis()
         scope.launch {
             val inputText = content.text.trim()
-        val mathRegex = Regex("""^[a-zA-Z0-9\s\+\-\*\/\(\)\.\%\^]+$""")
-        if (mathRegex.matches(inputText) && inputText.isNotBlank()) {
-            try {
-                val result = net.objecthunter.exp4j.ExpressionBuilder(inputText).build().evaluate()
-                val resultText = if (result == result.toLong().toDouble()) {
-    String.format(java.util.Locale("id", "ID"), "%,d", result.toLong())
-} else {
-    result.toString()
+        val cleanInput = inputText.trimEnd()
+        val hasTrigger = cleanInput.endsWith("=")
+        if (hasTrigger) {
+          val evalInput = cleanInput.dropLast(1).trim()
+          val mathExtractRegex = Regex("""[\d\s\+\-\*\/\(\)\.\%\^]+""")
+          val mathCandidate = mathExtractRegex.findAll(evalInput)
+              .map { it.value.trim() }
+              .filter { it.isNotBlank() && it.any { c -> c.isDigit() } }
+             .lastOrNull()
+          if (mathCandidate != null) {
+              try {
+            val result = net.objecthunter.exp4j.ExpressionBuilder(mathCandidate).build().evaluate()
+            val resultText = if (result == result.toLong().toDouble()) {
+                String.format(java.util.Locale("id", "ID"), "%,d", result.toLong())
+            } else {
+                result.toString()
+            }
+            internalSuggestionsGuard.withLock {
+                internalSuggestions = reqTime to listOf(
+                    MathSuggestionCandidate(text = resultText, secondaryText = mathCandidate)
+                )
+            }
+            return@launch
+        } catch (_: Exception) { }
+    }
 }
-                internalSuggestionsGuard.withLock {
-                    internalSuggestions = reqTime to listOf(
-                        MathSuggestionCandidate(text = resultText, secondaryText = inputText)
-                    )
-                }
-                return@launch
-            } catch (_: Exception) { }
-        }
           val currencyRegex = Regex("""^(\d+(?:\.\d+)?)\s*([a-zA-Z]{3})\s+to\s+([a-zA-Z]{3})$""", RegexOption.IGNORE_CASE)
           val currencyMatch = currencyRegex.find(inputText)
           if (currencyMatch != null) {
@@ -242,79 +251,55 @@ class NlpManager(context: Context) {
           }
           
           val translateRegex = Regex("""^tr\s+([a-zA-Z]{2})\s+to\s+([a-zA-Z]{2})\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
-          val translateMatch = translateRegex.find(inputText)
+val translateMatch = translateRegex.find(inputText)
 
-          if (translateMatch != null) {
-            val fromLang = translateMatch.groupValues[1].lowercase()
-            val toLang = translateMatch.groupValues[2].lowercase()
-           val textToTranslate = translateMatch.groupValues[3].trim()
+if (translateMatch != null) {
+    val fromLang = translateMatch.groupValues[1].uppercase()
+    val toLang = translateMatch.groupValues[2].uppercase()
+    val textToTranslate = translateMatch.groupValues[3].trim()
 
-            try {
-                
-                val encodedTr = java.net.URLEncoder.encode(textToTranslate, "UTF-8")
-                val trUrl = "https://lingva.ml/api/v1/$fromLang/$toLang/$encodedTr"
-                val trRequest = okhttp3.Request.Builder().url(trUrl).build()
-                val trResponse = httpClient.newCall(trRequest).execute()
+    try {
+        val systemInstruction = "You are a professional translator. Task: Translate text and fix grammar. Rule: Output ONLY the translated result. No explanations, no quotes, no conversational filler."
+        val userPrompt = "Translate from $fromLang to $toLang: $textToTranslate"
+        val fullPrompt = "$systemInstruction\n\n$userPrompt"
 
-                val trBody = trResponse.body?.string() ?: return@launch
-                val trJson = org.json.JSONObject(trBody)
-                var finalResult = trJson.getString("translation")
-                var statusLabel = "$fromLang → $toLang"
-
-
-        val ltLangMap = mapOf(
-            "en" to "en-US",
-            "id" to "id-ID",
-            "de" to "de-DE",
-            "fr" to "fr-FR",
-            "es" to "es-ES",
-            "pt" to "pt-BR",
-            "nl" to "nl-NL",
-            "pl" to "pl-PL",
-            "ru" to "ru-RU",
-            "ja" to "ja-JP",
-            "zh" to "zh-CN"
-          )
-            val ltLang = ltLangMap[toLang]
-            if (ltLang != null) {
-            val encodedGr = java.net.URLEncoder.encode(finalResult, "UTF-8")
-            val grUrl = "https://api.languagetool.org/v2/check?text=$encodedGr&language=$ltLang"
-            val grRequest = okhttp3.Request.Builder().url(grUrl).build()
-            val grResponse = httpClient.newCall(grRequest).execute()
-
-            val grBody = grResponse.body?.string()
-            if (grBody != null) {
-                val grMatches = org.json.JSONObject(grBody).getJSONArray("matches")
-                if (grMatches.length() > 0) {
-                    val sb = StringBuilder(finalResult)
-                    val matchList = (0 until grMatches.length()).map { i ->
-                        val m = grMatches.getJSONObject(i)
-                        Triple(
-                            m.getInt("offset"),
-                            m.getInt("length"),
-                            m.getJSONArray("replacements").let { r ->
-                                if (r.length() > 0) r.getJSONObject(0).getString("value") else null
-                            }
-                        )
-                    }.filter { it.third != null }
-                     .sortedByDescending { it.first }
-
-                    for ((offset, length, replacement) in matchList) {
-                        sb.replace(offset, offset + length, replacement!!)
-                    }
-                    finalResult = sb.toString()
-                    statusLabel += " (Grammar ✅)"
-                }
-            }
+        val jsonBody = """
+        {
+          "contents": [{"parts": [{"text": "$fullPrompt"}]}],
+          "generationConfig": {
+            "temperature": 0.1,
+            "topP": 0.95,
+            "maxOutputTokens": 1024
+          }
         }
+        """.trimIndent()
+
+        val request = okhttp3.Request.Builder()
+            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBMiorDgXixJpPKmPV9BEfNEVTUZLR2ads")
+            .post(okhttp3.RequestBody.create(
+                okhttp3.MediaType.parse("application/json"),
+                jsonBody
+            ))
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+        val body = response.body?.string() ?: return@launch
+        val json = org.json.JSONObject(body)
+        val finalResult = json
+            .getJSONArray("candidates")
+            .getJSONObject(0)
+            .getJSONObject("content")
+            .getJSONArray("parts")
+            .getJSONObject(0)
+            .getString("text")
+            .trim()
 
         internalSuggestionsGuard.withLock {
             internalSuggestions = reqTime to listOf(
-                MathSuggestionCandidate(text = finalResult, secondaryText = statusLabel)
+                MathSuggestionCandidate(text = finalResult, secondaryText = "$fromLang → $toLang")
             )
         }
         return@launch
-
     } catch (_: Exception) { }
 }
 
