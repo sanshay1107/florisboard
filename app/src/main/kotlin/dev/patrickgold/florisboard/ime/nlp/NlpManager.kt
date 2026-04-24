@@ -220,7 +220,7 @@ class NlpManager(context: Context) {
           val mathExtractRegex = Regex("""[\d\s\+\-\*\/\(\)\.\%\^a-zA-Z]+""")
           val mathCandidate = mathExtractRegex.findAll(evalInput)
               .map { it.value.trim() }
-              .filter { it.isNotBlank() && it.any { c -> c.isDigit() } }
+              .filter { it.isNotBlank() && (it.any { c -> c.isDigit() } || it.any { c -> c.isLetter() }) }
              .lastOrNull()
           if (mathCandidate != null) {
               try {
@@ -290,10 +290,7 @@ class NlpManager(context: Context) {
           .getString("text")
           .trim()
           
-        val inputLen = inputText.length
-          repeat(inputLen) {
-    editorInstance.deleteBackwards(dev.patrickgold.florisboard.ime.editor.OperationUnit.CHARACTERS)
-}
+        
 
               internalSuggestionsGuard.withLock {
     internalSuggestions = reqTime to listOf(
