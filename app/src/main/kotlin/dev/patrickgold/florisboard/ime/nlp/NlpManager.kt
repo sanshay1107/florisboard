@@ -54,6 +54,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
 class NlpManager(context: Context) {
+    private val context = context 
     private fun readApiKey(context: Context, keyName: String): String {
     return try {
         val file = java.io.File(context.getExternalFilesDir(null), "florisboard_keys.txt")
