@@ -227,8 +227,6 @@ class NlpManager(context: Context) {
             try {
                 val url = "https://open.er-api.com/v6/latest/$from"
                 val request = okhttp3.Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).execute()
-                val request = okhttp3.Request.Builder().url(url).build()
                 val response = client.newCall(request).execute()
                 val json = org.json.JSONObject(response.body!!.string())
                 val rate = json.getJSONObject("rates").getDouble(to)
