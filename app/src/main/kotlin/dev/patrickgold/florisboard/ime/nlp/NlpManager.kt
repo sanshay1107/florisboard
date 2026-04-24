@@ -248,7 +248,7 @@ class NlpManager(context: Context) {
             val fromLang = translateMatch.groupValues[1].lowercase()
             val toLang = translateMatch.groupValues[2].lowercase()
            val textToTranslate = translateMatch.groupValues[3].trim()
-            val email = "EMAIL_KAMU@gmail.com"
+            val email = "janganmakan56@gmail.com"
 
             try {
                 val encodedTr = java.net.URLEncoder.encode(textToTranslate, "UTF-8")
