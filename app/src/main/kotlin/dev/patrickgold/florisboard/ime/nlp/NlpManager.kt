@@ -51,6 +51,10 @@ import kotlin.properties.Delegates
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
 class NlpManager(context: Context) {
+    private val httpClient = okhttp3.OkHttpClient.Builder()
+    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+    .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+    .build()
     private val blankStrRegex = Regex(BLANK_STR_PATTERN)
 
     private val prefs by FlorisPreferenceStore
@@ -222,7 +226,8 @@ class NlpManager(context: Context) {
             val to = currencyMatch.groupValues[3].uppercase()
             try {
                 val url = "https://open.er-api.com/v6/latest/$from"
-                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(url).build()
+                val response = httpClient.newCall(request).execute()
                 val request = okhttp3.Request.Builder().url(url).build()
                 val response = client.newCall(request).execute()
                 val json = org.json.JSONObject(response.body!!.string())
@@ -237,6 +242,87 @@ class NlpManager(context: Context) {
                 return@launch
             } catch (_: Exception) { }
           }
+          
+          val translateRegex = Regex("""^tr\s+([a-zA-Z]{2})\s+to\s+([a-zA-Z]{2})\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
+          val translateMatch = translateRegex.find(inputText)
+
+          if (translateMatch != null) {
+            val fromLang = translateMatch.groupValues[1].lowercase()
+            val toLang = translateMatch.groupValues[2].lowercase()
+           val textToTranslate = translateMatch.groupValues[3].trim()
+            val email = "EMAIL_KAMU@gmail.com"
+
+            try {
+                val encodedTr = java.net.URLEncoder.encode(textToTranslate, "UTF-8")
+                val trUrl = "https://api.mymemory.translated.net/get?q=$encodedTr&langpair=$fromLang|$toLang&de=$email"
+                val trRequest = okhttp3.Request.Builder().url(trUrl).build()
+                val trResponse = httpClient.newCall(trRequest).execute()
+
+                val trBody = trResponse.body?.string() ?: return@launch
+                val trJson = org.json.JSONObject(trBody)
+
+                if (trJson.getInt("responseStatus") != 200) return@launch
+
+                var finalResult = trJson.getJSONObject("responseData").getString("translatedText")
+                var statusLabel = "$fromLang → $toLang"
+
+
+        val ltLangMap = mapOf(
+            "en" to "en-US",
+            "id" to "id-ID",
+            "de" to "de-DE",
+            "fr" to "fr-FR",
+            "es" to "es-ES",
+            "pt" to "pt-BR",
+            "nl" to "nl-NL",
+            "pl" to "pl-PL",
+            "ru" to "ru-RU",
+            "ja" to "ja-JP",
+            "zh" to "zh-CN"
+          )
+            val ltLang = ltLangMap[toLang]
+            if (ltLang != null) {
+            val encodedGr = java.net.URLEncoder.encode(finalResult, "UTF-8")
+            val grUrl = "https://api.languagetool.org/v2/check?text=$encodedGr&language=$ltLang"
+            val grRequest = okhttp3.Request.Builder().url(grUrl).build()
+            val grResponse = httpClient.newCall(grRequest).execute()
+
+            val grBody = grResponse.body?.string()
+            if (grBody != null) {
+                val grMatches = org.json.JSONObject(grBody).getJSONArray("matches")
+                if (grMatches.length() > 0) {
+                    val sb = StringBuilder(finalResult)
+                    val matchList = (0 until grMatches.length()).map { i ->
+                        val m = grMatches.getJSONObject(i)
+                        Triple(
+                            m.getInt("offset"),
+                            m.getInt("length"),
+                            m.getJSONArray("replacements").let { r ->
+                                if (r.length() > 0) r.getJSONObject(0).getString("value") else null
+                            }
+                        )
+                    }.filter { it.third != null }
+                     .sortedByDescending { it.first }
+
+                    for ((offset, length, replacement) in matchList) {
+                        sb.replace(offset, offset + length, replacement!!)
+                    }
+                    finalResult = sb.toString()
+                    statusLabel += " (Grammar ✅)"
+                }
+            }
+        }
+
+        internalSuggestionsGuard.withLock {
+            internalSuggestions = reqTime to listOf(
+                MathSuggestionCandidate(text = finalResult, secondaryText = statusLabel)
+            )
+        }
+        return@launch
+
+    } catch (_: Exception) { }
+}
+
             val emojiSuggestions = when {
                 prefs.emoji.suggestionEnabled.get() -> {
                     emojiSuggestionProvider.suggest(
