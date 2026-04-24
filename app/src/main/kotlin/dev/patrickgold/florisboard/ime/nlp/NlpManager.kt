@@ -48,6 +48,8 @@ import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.properties.Delegates
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
@@ -251,6 +253,7 @@ class NlpManager(context: Context) {
             } catch (_: Exception) { }
           }
           
+  
           val translateRegex = Regex("""^tr\s+([a-zA-Z]{2})\s+to\s+([a-zA-Z]{2})\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
 val translateMatch = translateRegex.find(inputText)
 
@@ -275,14 +278,11 @@ if (translateMatch != null) {
         }
         """.trimIndent()
 
-        val request = okhttp3.Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
-            .post(okhttp3.RequestBody.create(
-                okhttp3.RequestBody.create(
-    "application/json".toMediaType(),
-    jsonBody
-))
-            .build()
+        val body = jsonBody.toRequestBody("application/json".toMediaType())
+val request = okhttp3.Request.Builder()
+    .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
+    .post(body)
+    .build()
 
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: return@launch
