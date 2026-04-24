@@ -47,6 +47,7 @@ import org.florisboard.lib.kotlin.guardedByLock
 import org.florisboard.lib.kotlin.collectLatestIn
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.properties.Delegates
+import okhttp3.MediaType.Companion.toMediaType
 
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
@@ -275,11 +276,12 @@ if (translateMatch != null) {
         """.trimIndent()
 
         val request = okhttp3.Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBMiorDgXixJpPKmPV9BEfNEVTUZLR2ads")
+            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${dev.patrickgold.florisboard.BuildConfig.GEMINI_API_KEY}")
             .post(okhttp3.RequestBody.create(
-                okhttp3.MediaType.parse("application/json"),
-                jsonBody
-            ))
+                okhttp3.RequestBody.create(
+    "application/json".toMediaType(),
+    jsonBody
+))
             .build()
 
         val response = httpClient.newCall(request).execute()
