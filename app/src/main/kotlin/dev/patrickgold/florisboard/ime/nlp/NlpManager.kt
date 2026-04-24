@@ -277,18 +277,25 @@ class NlpManager(context: Context) {
 
         val request = okhttp3.Request.Builder()
             .url("https://api-free.deepl.com/v2/translate")
-            .addHeader("Authorization", "DeepL-Auth-Key ${dev.patrickgold.florisboard.BuildConfig.DEEPL_API_KEY}")
+            .addHeader("Authorization", "DeepL-Auth-Key ${readApiKey("DEEPL_API_KEY")}")
             .post(requestBody)
             .build()
 
         val response = httpClient.newCall(request).execute()
         val body = response.body?.string() ?: "null body"
-          internalSuggestionsGuard.withLock {
-    internalSuggestions = reqTime to listOf(
-        MathSuggestionCandidate(text = body.take(80), secondaryText = "raw")
-    )
-}
-return@launch
+        internalSuggestionsGuard.withLock {
+            internalSuggestions = reqTime to listOf(
+                MathSuggestionCandidate(text = body.take(80), secondaryText = "raw")
+            )
+        }
+        return@launch
+    } catch (e: Exception) {
+        internalSuggestionsGuard.withLock {
+            internalSuggestions = reqTime to listOf(
+                MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
+            )
+        }
+        return@launch
     }
 }
 
