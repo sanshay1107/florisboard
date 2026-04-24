@@ -292,7 +292,7 @@ class NlpManager(context: Context) {
           
         val inputLen = inputText.length
           repeat(inputLen) {
-            editorInstance.deleteBackwards()
+            editorInstance.deleteBackwards(inputLen)
 }
 
               internalSuggestionsGuard.withLock {
