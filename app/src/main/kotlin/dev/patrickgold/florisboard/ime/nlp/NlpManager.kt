@@ -256,6 +256,7 @@ class NlpManager(context: Context) {
   
           val translateRegex = Regex("""^tr\s+([a-zA-Z]{2})\s+to\s+([a-zA-Z]{2})\s*:\s*(.+)$""", RegexOption.IGNORE_CASE)
           val translateMatch = translateRegex.find(inputText)
+          android.util.Log.d("TRANSLATE", "input='$inputText' match=${translateMatch != null}")
 
           if (translateMatch != null) {
     val fromLang = translateMatch.groupValues[1].uppercase()
