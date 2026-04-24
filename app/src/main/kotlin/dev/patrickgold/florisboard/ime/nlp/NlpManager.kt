@@ -217,7 +217,7 @@ class NlpManager(context: Context) {
         val hasTrigger = cleanInput.endsWith("=")
         if (hasTrigger) {
           val evalInput = cleanInput.dropLast(1).trim()
-          val mathExtractRegex = Regex("""[\d\s\+\-\*\/\(\)\.\%\^]+""")
+          val mathExtractRegex = Regex("""[\d\s\+\-\*\/\(\)\.\%\^a-zA-Z]+""")
           val mathCandidate = mathExtractRegex.findAll(evalInput)
               .map { it.value.trim() }
               .filter { it.isNotBlank() && it.any { c -> c.isDigit() } }
@@ -289,6 +289,11 @@ class NlpManager(context: Context) {
           .getJSONObject(0)
           .getString("text")
           .trim()
+          
+        val inputLen = inputText.length
+          repeat(inputLen) {
+            editorInstance.deleteBackwards()
+}
 
               internalSuggestionsGuard.withLock {
     internalSuggestions = reqTime to listOf(
