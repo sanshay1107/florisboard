@@ -54,6 +54,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 private const val BLANK_STR_PATTERN = "^\\s*$"
 
 class NlpManager(context: Context) {
+    private fun readApiKey(keyName: String): String {
+    return try {
+        val file = java.io.File("/sdcard/florisboard_keys.txt")
+        file.readLines()
+            .firstOrNull { it.startsWith("$keyName=") }
+            ?.substringAfter("=")
+            ?.trim() ?: ""
+    } catch (_: Exception) { "" }
+}
     private val httpClient = okhttp3.OkHttpClient.Builder()
     .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
     .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
