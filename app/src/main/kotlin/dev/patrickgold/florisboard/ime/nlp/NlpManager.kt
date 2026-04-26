@@ -293,19 +293,22 @@ class NlpManager(context: Context) {
         
 
               internalSuggestionsGuard.withLock {
-    internalSuggestions = reqTime to listOf(
-        MathSuggestionCandidate(text = finalResult, secondaryText = "DeepL: $fromLang→$toLang")
+              internalSuggestions = reqTime to listOf(
+              TranslateSuggestionCandidate(
+            text = finalResult,
+            secondaryText = "DeepL: $fromLang→$toLang",
+            queryLength = translateMatch.value.length
+        )
     )
 }
 return@launch
 } catch (e: Exception) {
-        internalSuggestionsGuard.withLock {
-            internalSuggestions = reqTime to listOf(
-                MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
-            )
-        }
-        return@launch
+    internalSuggestionsGuard.withLock {
+        internalSuggestions = reqTime to listOf(
+            MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
+        )
     }
+    return@launch
 }
 
                 val emojiSuggestions = when {

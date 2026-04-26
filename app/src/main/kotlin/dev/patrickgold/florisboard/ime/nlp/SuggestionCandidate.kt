@@ -179,3 +179,14 @@ data class MathSuggestionCandidate(
     override val icon: ImageVector? = null,
     override val sourceProvider: SuggestionProvider? = null,
 ) : SuggestionCandidate
+
+data class TranslateSuggestionCandidate(
+    override val text: CharSequence,
+    override val secondaryText: CharSequence? = null,
+    override val confidence: Double = 1.0,
+    override val isEligibleForAutoCommit: Boolean = false,
+    override val isEligibleForUserRemoval: Boolean = false,
+    override val icon: ImageVector? = null,
+    override val sourceProvider: SuggestionProvider? = null,
+    val queryLength: Int = 0,
+) : SuggestionCandidate

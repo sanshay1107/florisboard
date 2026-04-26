@@ -80,6 +80,7 @@ import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.collectIn
 import org.florisboard.lib.kotlin.collectLatestIn
+import dev.patrickgold.florisboard.ime.nlp.TranslateSuggestionCandidate
 
 private val DoubleSpacePeriodMatcher = """([^.!?‽\s]\s)""".toRegex()
 
@@ -282,14 +283,21 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
     }
 
     fun commitCandidate(candidate: SuggestionCandidate) {
-        scope.launch {
-            candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
-        }
-        when (candidate) {
-            is ClipboardSuggestionCandidate -> editorInstance.commitClipboardItem(candidate.clipboardItem)
-            else -> editorInstance.commitCompletion(candidate)
-        }
+    scope.launch {
+        candidate.sourceProvider?.notifySuggestionAccepted(subtypeManager.activeSubtype, candidate)
     }
+    when (candidate) {
+        is ClipboardSuggestionCandidate -> editorInstance.commitClipboardItem(candidate.clipboardItem)
+        is TranslateSuggestionCandidate -> {
+            val ic = FlorisImeService.currentInputConnection() ?: return
+            ic.beginBatchEdit()
+            ic.deleteSurroundingText(candidate.queryLength, 0)
+            ic.commitText(candidate.text, 1)
+            ic.endBatchEdit()
+        }
+        else -> editorInstance.commitCompletion(candidate)
+    }
+}
 
     fun commitGesture(word: String) {
         editorInstance.commitGesture(fixCase(word))
