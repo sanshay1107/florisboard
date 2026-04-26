@@ -309,21 +309,17 @@ return@launch
         )
     }
     return@launch
+} catch (e: Exception) {
+    internalSuggestionsGuard.withLock {
+        internalSuggestions = reqTime to listOf(
+            MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
+        )
+    }
+    return@launch
 }
+}  // <-- tutup if (translateMatch != null)
 
                 val emojiSuggestions = when {
-                prefs.emoji.suggestionEnabled.get() -> {
-                    emojiSuggestionProvider.suggest(
-                        subtype = subtype,
-                        content = content,
-                        maxCandidateCount = prefs.emoji.suggestionCandidateMaxCount.get(),
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
-                }
-                else -> emptyList()
-            }
-            val suggestions = when {
                 emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
                     emptyList()
                 }
