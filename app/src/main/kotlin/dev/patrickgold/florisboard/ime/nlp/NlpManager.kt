@@ -267,80 +267,75 @@ class NlpManager(context: Context) {
           val translateMatch = translateRegex.find(inputText)
 
           if (translateMatch != null) {
-    val fromLang = translateMatch.groupValues[1].uppercase()
-    val toLang = translateMatch.groupValues[2].uppercase()
-    val textToTranslate = translateMatch.groupValues[3].trim()
+              val fromLang = translateMatch.groupValues[1].uppercase()
+              val toLang = translateMatch.groupValues[2].uppercase()
+              val textToTranslate = translateMatch.groupValues[3].trim()
+              try {
+                  val requestBody = "text=${java.net.URLEncoder.encode(textToTranslate, "UTF-8")}&source_lang=$fromLang&target_lang=$toLang"
+                      .toRequestBody("application/x-www-form-urlencoded".toMediaType())
+                  val request = okhttp3.Request.Builder()
+                      .url("https://api-free.deepl.com/v2/translate")
+                      .addHeader("Authorization", "DeepL-Auth-Key ${dev.patrickgold.florisboard.BuildConfig.DEEPL_API_KEY}")
+                      .post(requestBody)
+                      .build()
+                  val response = httpClient.newCall(request).execute()
+                  val body = response.body?.string() ?: return@launch
+                  val json = org.json.JSONObject(body)
+                  val finalResult = json.getJSONArray("translations").getJSONObject(0).getString("text").trim()
+                  internalSuggestionsGuard.withLock {
+                      internalSuggestions = reqTime to listOf(
+                          TranslateSuggestionCandidate(
+                              text = finalResult,
+                              secondaryText = "DeepL: $fromLang→$toLang",
+                              queryLength = translateMatch.value.length
+                          )
+                      )
+                  }
+                  return@launch
+              } catch (e: Exception) {
+                  internalSuggestionsGuard.withLock {
+                      internalSuggestions = reqTime to listOf(
+                          MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
+                      )
+                  }
+                  return@launch
+              }
+          }
 
-    try {
-        val requestBody = "text=${java.net.URLEncoder.encode(textToTranslate, "UTF-8")}&source_lang=$fromLang&target_lang=$toLang"
-            .toRequestBody("application/x-www-form-urlencoded".toMediaType())
-
-        val request = okhttp3.Request.Builder()
-            .url("https://api-free.deepl.com/v2/translate")
-            .addHeader("Authorization", "DeepL-Auth-Key ${dev.patrickgold.florisboard.BuildConfig.DEEPL_API_KEY}")
-            .post(requestBody)
-            .build()
-
-        val response = httpClient.newCall(request).execute()
-        val body = response.body?.string() ?: return@launch
-        val json = org.json.JSONObject(body)
-        val finalResult = json
-          .getJSONArray("translations")
-          .getJSONObject(0)
-          .getString("text")
-          .trim()
-          
-        
-
-              internalSuggestionsGuard.withLock {
-              internalSuggestions = reqTime to listOf(
-              TranslateSuggestionCandidate(
-            text = finalResult,
-            secondaryText = "DeepL: $fromLang→$toLang",
-            queryLength = translateMatch.value.length
-        )
-    )
-}
-return@launch
-} catch (e: Exception) {
-    internalSuggestionsGuard.withLock {
-        internalSuggestions = reqTime to listOf(
-            MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
-        )
-    }
-    return@launch
-} catch (e: Exception) {
-    internalSuggestionsGuard.withLock {
-        internalSuggestions = reqTime to listOf(
-            MathSuggestionCandidate(text = "ERR: ${e.message}", secondaryText = "translate failed")
-        )
-    }
-    return@launch
-}
-}  // <-- tutup if (translateMatch != null)
-
-                val emojiSuggestions = when {
-                emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
-                    emptyList()
-                }
-                else -> {
-                    getSuggestionProvider(subtype).suggest(
-                        subtype = subtype,
-                        content = content,
-                        maxCandidateCount = 8,
-                        allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
-                        isPrivateSession = keyboardManager.activeState.isIncognitoMode,
-                    )
-                }
-            }
-            internalSuggestionsGuard.withLock {
-                if (internalSuggestions.first < reqTime) {
-                    internalSuggestions = reqTime to buildList {
-                        addAll(emojiSuggestions)
-                        addAll(suggestions)
-                    }
-                }
-            }
+          val emojiSuggestions = when {
+              prefs.emoji.suggestionEnabled.get() -> {
+                  emojiSuggestionProvider.suggest(
+                      subtype = subtype,
+                      content = content,
+                      maxCandidateCount = prefs.emoji.suggestionCandidateMaxCount.get(),
+                      allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                      isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                  )
+              }
+              else -> emptyList()
+          }
+          val suggestions = when {
+              emojiSuggestions.isNotEmpty() && prefs.emoji.suggestionType.get().prefix.isNotEmpty() -> {
+                  emptyList()
+              }
+              else -> {
+                  getSuggestionProvider(subtype).suggest(
+                      subtype = subtype,
+                      content = content,
+                      maxCandidateCount = 8,
+                      allowPossiblyOffensive = !prefs.suggestion.blockPossiblyOffensive.get(),
+                      isPrivateSession = keyboardManager.activeState.isIncognitoMode,
+                  )
+              }
+          }
+          internalSuggestionsGuard.withLock {
+              if (internalSuggestions.first < reqTime) {
+                  internalSuggestions = reqTime to buildList {
+                      addAll(emojiSuggestions)
+                      addAll(suggestions)
+                  }
+              }
+          }
         }
     }
 
